@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"sync"
@@ -153,7 +154,19 @@ func restoreContent(client *winrm.Client, fromPath, toPath string) error {
 		return err
 	}
 	defer cmd.Close()
+
+	var wg sync.WaitGroup
+	copyFunc := func(w io.Writer, r io.Reader) {
+		defer wg.Done()
+		io.Copy(w, r)
+	}
+
+	wg.Add(2)
+	go copyFunc(ioutil.Discard, cmd.Stdout)
+	go copyFunc(ioutil.Discard, cmd.Stderr)
+
 	cmd.Wait()
+	wg.Wait()
 
 	if cmd.ExitCode() != 0 {
 		return fmt.Errorf("restore operation returned code=%d", cmd.ExitCode())
@@ -180,7 +193,19 @@ func cleanupContent(client *winrm.Client, filePath string) error {
 		return err
 	}
 	defer cmd.Close()
+
+	var wg sync.WaitGroup
+	copyFunc := func(w io.Writer, r io.Reader) {
+		defer wg.Done()
+		io.Copy(w, r)
+	}
+
+	wg.Add(2)
+	go copyFunc(ioutil.Discard, cmd.Stdout)
+	go copyFunc(ioutil.Discard, cmd.Stderr)
+
 	cmd.Wait()
+	wg.Wait()
 
 	if cmd.ExitCode() != 0 {
 		return fmt.Errorf("cleanup operation returned code=%d", cmd.ExitCode())
@@ -196,7 +221,18 @@ func appendContent(shell *winrm.Shell, filePath, content string) error {
 	}
 
 	defer cmd.Close()
+	var wg sync.WaitGroup
+	copyFunc := func(w io.Writer, r io.Reader) {
+		defer wg.Done()
+		io.Copy(w, r)
+	}
+
+	wg.Add(2)
+	go copyFunc(ioutil.Discard, cmd.Stdout)
+	go copyFunc(ioutil.Discard, cmd.Stderr)
+
 	cmd.Wait()
+	wg.Wait()
 
 	if cmd.ExitCode() != 0 {
 		return fmt.Errorf("upload operation returned code=%d", cmd.ExitCode())
